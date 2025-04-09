@@ -524,7 +524,6 @@ void GeneralConf::historyConfirmationToDelete(bool checked)
 {
     ConfigHandler().setHistoryConfirmationToDelete(checked);
 }
-
 void GeneralConf::initUploadHistoryMax()
 {
     auto* box = new QGroupBox(tr("Latest Uploads Max Size"));
@@ -535,10 +534,10 @@ void GeneralConf::initUploadHistoryMax()
     box->setLayout(vboxLayout);
 
     m_uploadHistoryMax = new QSpinBox(this);
-    m_uploadHistoryMax->setMaximum(50);
+    m_uploadHistoryMax->setMaximum(100); // Allow up to 100
     QString foreground = this->palette().windowText().color().name();
     m_uploadHistoryMax->setStyleSheet(
-      QStringLiteral("color: %1").arg(foreground));
+        QStringLiteral("color: %1").arg(foreground));
 
     connect(m_uploadHistoryMax,
             static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged),
@@ -546,6 +545,27 @@ void GeneralConf::initUploadHistoryMax()
             &GeneralConf::uploadHistoryMaxChanged);
     vboxLayout->addWidget(m_uploadHistoryMax);
 }
+/*void GeneralConf::initUploadHistoryMax()*/
+/*{*/
+/*    auto* box = new QGroupBox(tr("Latest Uploads Max Size"));*/
+/*    box->setFlat(true);*/
+/*    m_layout->addWidget(box);*/
+/**/
+/*    auto* vboxLayout = new QVBoxLayout();*/
+/*    box->setLayout(vboxLayout);*/
+/**/
+/*    m_uploadHistoryMax = new QSpinBox(this);*/
+/*    m_uploadHistoryMax->setMaximum(50);*/
+/*    QString foreground = this->palette().windowText().color().name();*/
+/*    m_uploadHistoryMax->setStyleSheet(*/
+/*      QStringLiteral("color: %1").arg(foreground));*/
+/**/
+/*    connect(m_uploadHistoryMax,*/
+/*            static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged),*/
+/*            this,*/
+/*            &GeneralConf::uploadHistoryMaxChanged);*/
+/*    vboxLayout->addWidget(m_uploadHistoryMax);*/
+/*}*/
 
 void GeneralConf::initUploadClientSecret()
 {

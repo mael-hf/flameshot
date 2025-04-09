@@ -9,7 +9,7 @@
 #include <QDesktopWidget>
 #include <QFileInfo>
 #include <QPixmap>
-
+const int IMAGES_BATCH_SIZE = 1;
 void scaleThumbnail(QPixmap& pixmap)
 {
     if (pixmap.height() / HISTORYPIXMAP_MAX_PREVIEW_HEIGHT >=
@@ -39,23 +39,69 @@ UploadHistory::UploadHistory(QWidget* parent)
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     resize(QDesktopWidget().availableGeometry(this).size() * 0.5);
 }
-
 void UploadHistory::loadHistory()
 {
     clearHistoryLayout(ui->historyContainer);
 
     History history = History();
-    QList<QString> historyFiles = history.history();
+    QList<QString> allHistoryFiles = history.history(); // Fetch all files
+
+    // Respect the "Latest Uploads Max Size" limit
+    int maxSize = ConfigHandler().uploadHistoryMax();
+    if (allHistoryFiles.size() > maxSize) {
+        // Move excess items to secondary storage
+        int excessCount = allHistoryFiles.size() - maxSize;
+        secondaryStorage.append(allHistoryFiles.mid(0, excessCount));
+        historyFiles = allHistoryFiles.mid(excessCount);
+    } else {
+        historyFiles = allHistoryFiles;
+    }
+
+    currentBatchStartIndex = 0;
 
     if (historyFiles.isEmpty()) {
         setEmptyMessage();
     } else {
-        foreach (QString fileName, historyFiles) {
-            addLine(history.path(), fileName);
+        loadNextBatch();
+    }
+
+    // Add "Load More" button
+    auto* loadMoreButton = new QPushButton(tr("Load More"), this);
+    connect(loadMoreButton, &QPushButton::clicked, this, [=]() {
+        loadNextBatch(); // Fetch more items
+    });
+    ui->historyContainer->addWidget(loadMoreButton);
+}
+void UploadHistory::loadNextBatch()
+{
+    int batchEndIndex = std::min(currentBatchStartIndex + IMAGES_BATCH_SIZE,
+                                 historyFiles.size());
+
+    for (int i = currentBatchStartIndex; i < batchEndIndex; ++i) {
+        addLine(history.path(), historyFiles[i]);
+    }
+
+    currentBatchStartIndex = batchEndIndex;
+
+    // If current history is exhausted, load from secondary storage
+    if (currentBatchStartIndex >= historyFiles.size() && !secondaryStorage.isEmpty()) {
+        // Move items from secondary storage to current history
+        int itemsToMove = std::min(IMAGES_BATCH_SIZE, secondaryStorage.size());
+        historyFiles.append(secondaryStorage.mid(0, itemsToMove));
+        secondaryStorage = secondaryStorage.mid(itemsToMove);
+
+        // Reset the batch index to continue loading
+        currentBatchStartIndex = historyFiles.size() - itemsToMove;
+    }
+
+    // Hide "Load More" button if everything is loaded
+    if (currentBatchStartIndex >= historyFiles.size() && secondaryStorage.isEmpty()) {
+        QPushButton* loadMoreButton = findChild<QPushButton*>("loadMoreButton");
+        if (loadMoreButton) {
+            loadMoreButton->hide();
         }
     }
 }
-
 void UploadHistory::setEmptyMessage()
 {
     auto* buttonEmpty = new QPushButton;
